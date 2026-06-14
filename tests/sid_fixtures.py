@@ -67,6 +67,7 @@ GRID_RUNNER = SidDumpSpec(
     slug="grid_runner", hvsc_path="MUSICIANS/J/Jammer/Grid_Runner.sid"
 )
 CAMEROCK = SidDumpSpec(slug="camerock", hvsc_path="MUSICIANS/D/DRAX/Camerock.sid")
+TRAP = SidDumpSpec(slug="trap", hvsc_path="MUSICIANS/D/Daglish_Ben/Trap.sid")
 
 
 def cache_dir() -> Path:
