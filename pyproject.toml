@@ -27,6 +27,16 @@ dependencies = [
     "preframr-audio>=0.5.9",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "black>=24",
+    "pylint>=3",
+    "pyright>=1.1.350",
+    "pytest>=8",
+    "pytest-cov>=5",
+    "pytest-xdist>=3.5",
+]
+
 [project.scripts]
 preframr-aug = "preframr_aug.cli:main"
 
