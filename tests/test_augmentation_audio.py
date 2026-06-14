@@ -69,14 +69,10 @@ def reduce_dump() -> Path:
     return _ensure(GRID_RUNNER)
 
 
-@pytest.fixture(scope="module")
-def instrument_host() -> Path:
-    return _ensure(TRAP)
-
-
-@pytest.fixture(scope="module")
-def instrument_donor() -> Path:
-    return _ensure(CAMEROCK)
+INSTRUMENT_PAIRINGS = [
+    (TRAP, CAMEROCK, "bass"),
+    (CAMEROCK, TRAP, "lead"),
+]
 
 
 def _role_safe_voice(ow, role: str):
@@ -103,32 +99,42 @@ def test_reduce_augmentation_is_audible(reduce_dump):
     print(f"reduce:   {aug_wav}")
 
 
-def test_instrument_augmentation_is_audible(instrument_host, instrument_donor):
-    """Same-role cross-tune transplant: the host bass keeps its line but adopts a donor bass instrument
-    whose envelope timescale fits, so the result is audibly re-voiced yet musical. The leakage guard runs
-    as in the real pipeline; the sonic band gate is corpus-scale (unreliable at fixture scale) so it is
-    left to production via the CLI --filter flag."""
-    host = writes.load_ow(instrument_host)
-    donor = writes.load_ow(instrument_donor)
-    host_voice = _role_safe_voice(host, "bass")
-    donor_voice = _role_safe_voice(donor, "bass")
+@pytest.mark.parametrize(
+    "host_spec, donor_spec, role",
+    INSTRUMENT_PAIRINGS,
+    ids=[f"{h.slug}-{r}" for h, _, r in INSTRUMENT_PAIRINGS],
+)
+def test_instrument_augmentation_is_audible(host_spec, donor_spec, role):
+    """Same-role cross-tune transplant: the host voice keeps its line but adopts a same-role donor
+    instrument whose envelope timescale fits, so the result is audibly re-voiced yet musical (bass<-bass
+    is a subtle tonal shift, lead<-lead more distinct). The leakage guard runs as in the real pipeline;
+    the corpus-scale sonic band gate is unreliable at fixture scale and left to the CLI --filter flag.
+    """
+    host_dump = _ensure(host_spec)
+    donor_dump = _ensure(donor_spec)
+    host = writes.load_ow(host_dump)
+    donor = writes.load_ow(donor_dump)
+    host_voice = _role_safe_voice(host, role)
+    donor_voice = _role_safe_voice(donor, role)
     if host_voice is None or donor_voice is None:
-        pytest.skip("no transplant-safe bass voice in host/donor")
-    provenance.guard_train_split(str(instrument_host), str(instrument_donor))
+        pytest.skip(
+            f"no transplant-safe {role} voice in {host_spec.slug}/{donor_spec.slug}"
+        )
+    provenance.guard_train_split(str(host_dump), str(donor_dump))
     new_ow, info = transplant.instrument_transplant(
         host, donor, host_voice, donor_voice
     )
     if new_ow is None:
         pytest.skip("no onset program available for the chosen voice pair")
     out = _wav_out_dir()
-    orig_wav = out / f"{TRAP.slug}_original.wav"
-    aug_wav = out / f"{TRAP.slug}_instrument.wav"
-    render_dump_to_wav(instrument_host, orig_wav)
+    orig_wav = out / f"{host_spec.slug}_original.wav"
+    aug_wav = out / f"{host_spec.slug}_{role}_instrument.wav"
+    render_dump_to_wav(host_dump, orig_wav)
     render_ow_to_wav(new_ow, aug_wav)
-    _assert_audible(orig_wav, aug_wav, "instrument")
+    _assert_audible(orig_wav, aug_wav, f"instrument:{role}")
     print(
-        f"\ninstrument host={TRAP.slug} v{info['host_voice']} "
-        f"<- donor={CAMEROCK.slug} v{info['donor_voice']}"
+        f"\ninstrument {host_spec.slug} v{info['host_voice']} "
+        f"<- {donor_spec.slug} v{info['donor_voice']} ({role})"
     )
     print(f"original:   {orig_wav}")
     print(f"instrument: {aug_wav}")
