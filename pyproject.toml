@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "preframr-aug"
 description = "Write-domain corpus augmentation for the preframr event model (reduction + transplant)."
-readme = "IMPLEMENTATION.md"
+readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
 authors = [{name = "Anarkiwi"}]
